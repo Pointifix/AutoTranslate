@@ -1,0 +1,9 @@
+displayName: "AutoTranslate"
+name: "auto-translate"
+author: "Pointifix"
+main: "autotranslate.AutoTranslate"
+description: "Automatically translates chat messages"
+version: 1.0
+minGameVersion: 136
+java: true
+hidden: true
