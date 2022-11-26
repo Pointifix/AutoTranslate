@@ -9,7 +9,7 @@ You will need to enter a credit card for verification, no money is being charge 
 The API includes 500.000 characters/month, which are approximately 10.000 messages/month, which should be more than enough
 for a single user.
 
-Further, you need to change the modules file of your Mindustry jre to a modules file including the modules 
+Further, if you are on a desktop, you need to change the modules file of your Mindustry jre to a modules file including the modules 
 `jdk.crypto.ec jdk.crypto.cryptoki`. Otherwise, the mod is not able to establish a connection to Deepl.
 A modules file containing those two modules is available for download in the Releases.
 
