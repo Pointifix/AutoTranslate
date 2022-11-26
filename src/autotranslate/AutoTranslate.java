@@ -66,7 +66,7 @@ public class AutoTranslate extends Mod {
         };
         ui.settings.getCategories().add(new SettingsMenuDialog.SettingsCategory(bundle.get("auto-translate.settings.title"), new TextureRegionDrawable(Core.atlas.find("auto-translate-logo")), builder));
 
-        String authKey = Core.settings.getString("auth-key");
+        String authKey = Core.settings.getString("auth-key", "");
 
         if (authKey.isEmpty()) {
             showDialog("Auto Translate", "Failed to initialize, invalid or empty authentication key, go to settings and enter a valid Deepl authentication key");
