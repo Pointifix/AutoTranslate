@@ -1,6 +1,7 @@
 # Auto Translate
 
 ![GitHub all releases](https://img.shields.io/github/downloads/Pointifix/AutoTranslate/total)
+![GitHub Repo stars](https://img.shields.io/github/stars/Pointifix/AutoTranslate?style=social)
 
 Automatically translates chat messages in Mindustry multiplayer.
 
