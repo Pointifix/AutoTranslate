@@ -1,6 +1,7 @@
 package autotranslate;
 
 import arc.Core;
+import arc.Events;
 import arc.func.Cons;
 import arc.scene.event.*;
 import arc.scene.style.TextureRegionDrawable;
@@ -10,6 +11,7 @@ import arc.struct.Seq;
 import arc.util.*;
 import com.deepl.api.*;
 import mindustry.Vars;
+import mindustry.game.EventType;
 import mindustry.gen.Call;
 import mindustry.mod.Mod;
 import mindustry.ui.dialogs.FullTextDialog;
@@ -22,9 +24,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import static arc.Core.bundle;
 import static mindustry.Vars.ui;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class AutoTranslate extends Mod {
-    Seq<String> messages;
-    Seq<String> processedMessages = new Seq<>();
+    String lastMessage = "";
+
+    String authKey;
+
+    private Map<String, TextResult> messageCache = new HashMap<String, TextResult>();
 
     @Override
     public void init() {
@@ -66,59 +74,56 @@ public class AutoTranslate extends Mod {
         };
         ui.settings.getCategories().add(new SettingsMenuDialog.SettingsCategory(bundle.get("auto-translate.settings.title"), new TextureRegionDrawable(Core.atlas.find("auto-translate-logo")), builder));
 
-        String authKey = Core.settings.getString("auth-key", "");
+        authKey = Core.settings.getString("auth-key", "");
 
         if (authKey.isEmpty()) {
             showDialog("Auto Translate", "Failed to initialize, invalid or empty authentication key, go to settings and enter a valid Deepl authentication key");
         }
 
-        try {
-            Translator translator = new Translator(authKey);
+        Events.on(EventType.PlayerChatEvent.class, e -> {
+            String newMessage = Strings.stripColors(e.message).trim();
 
-            try {
-                Field messagesField = ChatFragment.class.getDeclaredField("messages");
-                messagesField.setAccessible(true);
+            if (Core.settings.getBool("auto-translate-enabled", true)) {
+                if (newMessage.isEmpty())
+                    return;
 
-                messages = (Seq<String>) messagesField.get(Vars.ui.chatfrag);
+                if(e.player != null && Vars.player != null)
+                    if(Vars.player.id == e.player.id)
+                        return;
 
-                Timer.schedule(() -> {
-                    if (Core.settings.getBool("auto-translate-enabled", true)) {
-                        while (processedMessages.size < messages.size) {
-                            String message = messages.get(messages.size - processedMessages.size - 1);
-                            processedMessages.add(message);
-                            message = Strings.stripColors(message);
-                            if (message.isEmpty() || !message.startsWith("[") || message.contains(Strings.stripColors(Vars.player.name())))
-                                continue;
+                if (newMessage.contains("]")) newMessage = newMessage.substring(newMessage.indexOf("]"));
 
-                            if (message.contains("]")) message = message.substring(message.indexOf("]"));
+                if(newMessage.startsWith("+"))
+                    return;
 
-                            String finalMessage = message;
-                            Threads.thread(() -> {
-                                try {
-                                    String language = Core.settings.getString("target-language", "en-GB");
+                if(lastMessage.equals(newMessage))
+                    return;
 
-                                    TextResult result = translator.translateText(finalMessage, null, language);
+                String finalMessage = newMessage;
+                lastMessage = newMessage;
 
-                                    if (result.getDetectedSourceLanguage().equals(LanguageCode.standardize(language))) return;
+                Threads.thread(() -> {
+                    try {
+                        Translator translator = new Translator(authKey);
+                        String language = Core.settings.getString("target-language", "en-GB");
 
-                                    String translation = "[cyan]Translation: [gray]" + result.getText() + " [lightgray] - (" + result.getDetectedSourceLanguage() + ")";
-                                    processedMessages.add(translation);
-                                    Vars.player.sendMessage(translation);
-                                } catch (DeepLException | InterruptedException e) {
-                                    Log.err("Failed to translate message: " + e.getMessage());
-                                    Vars.player.sendMessage("[red]Failed to translate message");
-                                }
-                            });
-                        }
+                        TextResult translatedMessage = translateString(translator, language, finalMessage);
+
+                        String translation = "[cyan]Translation: [gray]" + translatedMessage.getText() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
+
+                        if(e.player != null)
+                            translation = "[cyan]Translation: [gray]["+ Strings.stripColors(e.player.name()).trim() +"]: " + translatedMessage.getText() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
+
+                        Vars.player.sendMessage(translation);
+                    } catch (DeepLException | InterruptedException error) {
+                        Log.err("Failed to translate message: " + error.getMessage());
+                        Vars.player.sendMessage("[red]Failed to translate message");
                     }
-                }, 0, 1);
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                Log.err("Failed to read messages: " + e.getMessage());
+                });
             }
-        } catch (IllegalArgumentException e) {
-            Log.err("Invalid Authentification key: " + e.getMessage());
-        }
+        });
     }
+
 
     private void showDialog(String title, String message) {
         FullTextDialog baseDialog = new FullTextDialog();
@@ -141,5 +146,34 @@ public class AutoTranslate extends Mod {
             table.button(name, clicked).margin(14).width(240f).pad(6);
             table.row();
         }
+
+
+    }
+
+    private String getMD5FromString(String text) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] array = md.digest(text.getBytes());
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < array.length; ++i) {
+                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+        }
+        return null;
+    }
+
+    private TextResult translateString(Translator translator, String language, String finalMessage) throws DeepLException, InterruptedException {
+        String messageKey = getMD5FromString(language + finalMessage);
+        if(messageCache.containsKey(messageKey))
+            return messageCache.get(messageKey);
+
+        TextResult result = translator.translateText(finalMessage, null, language);
+        if (result.getDetectedSourceLanguage().equals(LanguageCode.standardize(language)))
+            return null;
+
+        messageCache.put(messageKey, result);
+        return result;
     }
 }
