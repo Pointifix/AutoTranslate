@@ -109,10 +109,10 @@ public class AutoTranslate extends Mod {
 
                         TextResult translatedMessage = translateString(translator, language, finalMessage);
 
-                        String translation = translatedMessage.getText() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
+                        String translation = translatedMessage.getText().trim() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
 
                         if(e.player != null)
-                            translation = "["+ Strings.stripColors(e.player.name()) +"]: " + translatedMessage.getText() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
+                            translation = "["+ Strings.stripColors(e.player.name()) +"]: " + translatedMessage.getText().trim() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
 
                         Vars.player.sendMessage(translation);
                     } catch (DeepLException | InterruptedException error) {
