@@ -109,6 +109,13 @@ public class AutoTranslate extends Mod {
 
                         TextResult translatedMessage = translateString(translator, language, finalMessage);
 
+                        if(translatedMessage == null)
+                        {
+                            Log.err("Failed to translate message: translatedMessage == null");
+                            Vars.player.sendMessage("[red]Failed to translate message");
+                            return;
+                        }
+
                         String translation = translatedMessage.getText().trim() + " [lightgray] (" + translatedMessage.getDetectedSourceLanguage() + ")";
 
                         if(e.player != null)
