@@ -49,7 +49,8 @@ public class AutoTranslate extends Mod {
                     Translator translator = new Translator(authKey.get());
 
                     if (translator.getTargetLanguages().stream().anyMatch(l -> l.getCode().equals(targetLanguage.get()))) {
-                        Core.settings.put("auth-key", authKey.get());
+                        this.authKey = authKey.get();
+                        Core.settings.put("auth-key", this.authKey);
                         Core.settings.put("target-language", targetLanguage.get());
 
                         showDialog("Auto Translation", "Successfully configured Auto Translate");
